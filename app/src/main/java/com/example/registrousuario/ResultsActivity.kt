@@ -33,19 +33,19 @@ class ResultsActivity : AppCompatActivity() {
             porcentaje >= 0.8f -> {
                 tvMedalla.text = "🥇"
                 tvTitulo.text = "¡Increíble!"
-                tvMensaje.text = "🏆 ¡Eres una estrella!"
+                tvMensaje.text = " ¡Eres una estrella!"
                 estrella1.text = "⭐"; estrella2.text = "⭐"; estrella3.text = "⭐"
             }
             porcentaje >= 0.5f -> {
                 tvMedalla.text = "🥈"
                 tvTitulo.text = "¡Muy bien!"
-                tvMensaje.text = "🏅 ¡Sigue así, estrella!"
+                tvMensaje.text = "¡Sigue así, estrella!"
                 estrella1.text = "⭐"; estrella2.text = "⭐"; estrella3.text = "☆"
             }
             else -> {
                 tvMedalla.text = "🥉"
                 tvTitulo.text = "¡Sigue practicando!"
-                tvMensaje.text = "💪 ¡Tú puedes lograrlo!"
+                tvMensaje.text = " ¡Tú puedes lograrlo!"
                 estrella1.text = "⭐"; estrella2.text = "☆"; estrella3.text = "☆"
             }
         }
