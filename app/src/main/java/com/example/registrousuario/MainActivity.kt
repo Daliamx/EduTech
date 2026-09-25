@@ -100,6 +100,13 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             val db = AppDatabase.getDatabase(applicationContext)
+
+            val usuarioExistente = db.userDao().getUserByCorreo(correo)
+            if (usuarioExistente != null) {
+                tilCorreo.error = "Ya existe una cuenta con este correo"
+                return@launch
+            }
+
             db.userDao().insertUser(nuevoUsuario)
 
             Toast.makeText(
