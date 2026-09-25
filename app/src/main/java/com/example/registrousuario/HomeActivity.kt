@@ -4,11 +4,13 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.cardview.widget.CardView
 import androidx.lifecycle.lifecycleScope
 import com.example.registrousuario.data.AppDatabase
+import com.example.registrousuario.data.FavoriteSubject
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import kotlinx.coroutines.launch
 import java.text.Normalizer
@@ -30,6 +32,12 @@ class HomeActivity : AppCompatActivity() {
         bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_home -> true
+                R.id.nav_favorites -> {
+                    val intent = Intent(this, FavoritesActivity::class.java)
+                    startActivity(intent)
+                    overridePendingTransition(0, 0)
+                    true
+                }
                 R.id.nav_profile -> {
                     val intent = Intent(this, ProfileActivity::class.java)
                     startActivity(intent)
@@ -49,12 +57,46 @@ class HomeActivity : AppCompatActivity() {
             R.id.cardMusica to "Música"
         )
 
+        val prefs = getSharedPreferences("eduplay_prefs", MODE_PRIVATE)
+
         materias.forEach { (viewId, nombreMateria) ->
-            findViewById<CardView>(viewId).setOnClickListener {
+            val card = findViewById<CardView>(viewId)
+            card.setOnClickListener {
                 val intent = Intent(this, QuizActivity::class.java)
                 intent.putExtra("materia", nombreMateria)
                 intent.putExtra("edad", edadUsuario)
                 startActivity(intent)
+            }
+
+            card.setOnLongClickListener {
+                val correo = prefs.getString("correo_actual", null)
+                if (correo != null) {
+                    lifecycleScope.launch {
+                        val db = AppDatabase.getDatabase(applicationContext)
+                        val exist = db.favoriteSubjectDao().getFavoriteByName(correo, nombreMateria)
+                        if (exist != null) {
+                            Toast.makeText(this@HomeActivity, "'$nombreMateria' ya está en tus favoritos ⭐", Toast.LENGTH_SHORT).show()
+                        } else {
+                            val emojiMap = mapOf(
+                                "Matemáticas" to "➗",
+                                "Ciencias" to "🔬",
+                                "Lectura" to "📚",
+                                "Arte" to "🎨",
+                                "Historia" to "🌎",
+                                "Música" to "🎵"
+                            )
+                            val nuevoFav = FavoriteSubject(
+                                userCorreo = correo,
+                                nombre = nombreMateria,
+                                descripcion = "Materia principal de EduTech",
+                                emoji = emojiMap[nombreMateria] ?: "⭐"
+                            )
+                            db.favoriteSubjectDao().insertFavorite(nuevoFav)
+                            Toast.makeText(this@HomeActivity, "'$nombreMateria' añadida a favoritos ⭐", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+                true
             }
         }
 

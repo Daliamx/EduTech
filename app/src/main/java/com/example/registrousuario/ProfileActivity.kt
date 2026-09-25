@@ -56,6 +56,14 @@ class ProfileActivity : AppCompatActivity() {
                     finish()
                     true
                 }
+                R.id.nav_favorites -> {
+                    val intent = Intent(this, FavoritesActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                    startActivity(intent)
+                    overridePendingTransition(0, 0)
+                    finish()
+                    true
+                }
                 R.id.nav_profile -> true
                 else -> false
             }
