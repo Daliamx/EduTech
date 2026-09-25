@@ -2,110 +2,63 @@ package com.example.registrousuario
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.View
-import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.SearchView
-import androidx.cardview.widget.CardView
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import com.example.registrousuario.data.AppDatabase
 import com.example.registrousuario.data.FavoriteSubject
-import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.example.registrousuario.ui.components.NavTab
+import com.example.registrousuario.ui.screens.HomeScreen
+import com.example.registrousuario.ui.theme.EduTechTheme
 import kotlinx.coroutines.launch
-import java.text.Normalizer
 
-class HomeActivity : AppCompatActivity() {
+class HomeActivity : ComponentActivity() {
 
+    private var userName by mutableStateOf("")
     private var edadUsuario: Int = 8
-    private lateinit var tvSaludo: TextView
-    private lateinit var bottomNavigation: BottomNavigationView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_home)
 
-        tvSaludo = findViewById(R.id.tvSaludo)
-        bottomNavigation = findViewById(R.id.bottomNavigation)
-
-        bottomNavigation.selectedItemId = R.id.nav_home
-        bottomNavigation.setOnItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.nav_home -> true
-                R.id.nav_favorites -> {
-                    val intent = Intent(this, FavoritesActivity::class.java)
-                    startActivity(intent)
-                    overridePendingTransition(0, 0)
-                    true
-                }
-                R.id.nav_profile -> {
-                    val intent = Intent(this, ProfileActivity::class.java)
-                    startActivity(intent)
-                    overridePendingTransition(0, 0)
-                    true
-                }
-                else -> false
-            }
-        }
-
-        val materias = mapOf(
-            R.id.cardMatematicas to "Matemáticas",
-            R.id.cardCiencias to "Ciencias",
-            R.id.cardLectura to "Lectura",
-            R.id.cardArte to "Arte",
-            R.id.cardHistoria to "Historia",
-            R.id.cardMusica to "Música"
-        )
-
-        val prefs = getSharedPreferences("eduplay_prefs", MODE_PRIVATE)
-
-        materias.forEach { (viewId, nombreMateria) ->
-            val card = findViewById<CardView>(viewId)
-            card.setOnClickListener {
-                val intent = Intent(this, QuizActivity::class.java)
-                intent.putExtra("materia", nombreMateria)
-                intent.putExtra("edad", edadUsuario)
-                startActivity(intent)
-            }
-
-            card.setOnLongClickListener {
-                val correo = prefs.getString("correo_actual", null)
-                if (correo != null) {
-                    lifecycleScope.launch {
-                        val db = AppDatabase.getDatabase(applicationContext)
-                        val exist = db.favoriteSubjectDao().getFavoriteByName(correo, nombreMateria)
-                        if (exist != null) {
-                            Toast.makeText(this@HomeActivity, "'$nombreMateria' ya está en tus favoritos ⭐", Toast.LENGTH_SHORT).show()
-                        } else {
-                            val emojiMap = mapOf(
-                                "Matemáticas" to "➗",
-                                "Ciencias" to "🔬",
-                                "Lectura" to "📚",
-                                "Arte" to "🎨",
-                                "Historia" to "🌎",
-                                "Música" to "🎵"
-                            )
-                            val nuevoFav = FavoriteSubject(
-                                userCorreo = correo,
-                                nombre = nombreMateria,
-                                descripcion = "Materia principal de EduTech",
-                                emoji = emojiMap[nombreMateria] ?: "⭐"
-                            )
-                            db.favoriteSubjectDao().insertFavorite(nuevoFav)
-                            Toast.makeText(this@HomeActivity, "'$nombreMateria' añadida a favoritos ⭐", Toast.LENGTH_SHORT).show()
+        setContent {
+            EduTechTheme {
+                HomeScreen(
+                    userName = userName,
+                    onSubjectClick = { nombreMateria ->
+                        val intent = Intent(this, QuizActivity::class.java)
+                        intent.putExtra("materia", nombreMateria)
+                        intent.putExtra("edad", edadUsuario)
+                        startActivity(intent)
+                    },
+                    onAddFavorite = { nombreMateria ->
+                        agregarAFavoritos(nombreMateria)
+                    },
+                    onTabSelected = { tab ->
+                        when (tab) {
+                            NavTab.HOME -> {}
+                            NavTab.FAVORITES -> {
+                                val intent = Intent(this, FavoritesActivity::class.java)
+                                startActivity(intent)
+                                overridePendingTransition(0, 0)
+                            }
+                            NavTab.PROFILE -> {
+                                val intent = Intent(this, ProfileActivity::class.java)
+                                startActivity(intent)
+                                overridePendingTransition(0, 0)
+                            }
                         }
                     }
-                }
-                true
+                )
             }
         }
-
-        setupSearchView(materias)
     }
 
     override fun onResume() {
         super.onResume()
-        bottomNavigation.selectedItemId = R.id.nav_home
         cargarDatosUsuario()
     }
 
@@ -119,61 +72,39 @@ class HomeActivity : AppCompatActivity() {
                 val usuario = db.userDao().getUserByCorreo(correo)
                 if (usuario != null) {
                     edadUsuario = usuario.edad
-                    tvSaludo.text = "¡Hola, ${usuario.nombre}! 👋"
+                    userName = usuario.nombre
                 }
             }
         }
     }
 
-    private fun setupSearchView(materias: Map<Int, String>) {
-        val svBuscarMateria = findViewById<SearchView>(R.id.svBuscarMateria)
-        val tvSinResultados = findViewById<TextView>(R.id.tvSinResultados)
+    private fun agregarAFavoritos(nombreMateria: String) {
+        val prefs = getSharedPreferences("eduplay_prefs", MODE_PRIVATE)
+        val correo = prefs.getString("correo_actual", null) ?: return
 
-        val row1 = findViewById<View>(R.id.rowMaterias1)
-        val row2 = findViewById<View>(R.id.rowMaterias2)
-        val row3 = findViewById<View>(R.id.rowMaterias3)
-
-        val rowMap = mapOf(
-            row1 to listOf(R.id.cardMatematicas, R.id.cardCiencias),
-            row2 to listOf(R.id.cardLectura, R.id.cardArte),
-            row3 to listOf(R.id.cardHistoria, R.id.cardMusica)
-        )
-
-        svBuscarMateria?.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String?): Boolean {
-                return false
+        lifecycleScope.launch {
+            val db = AppDatabase.getDatabase(applicationContext)
+            val exist = db.favoriteSubjectDao().getFavoriteByName(correo, nombreMateria)
+            if (exist != null) {
+                Toast.makeText(this@HomeActivity, "'$nombreMateria' ya está en tus favoritos ⭐", Toast.LENGTH_SHORT).show()
+            } else {
+                val emojiMap = mapOf(
+                    "Matemáticas" to "➗",
+                    "Ciencias" to "🔬",
+                    "Lectura" to "📚",
+                    "Arte" to "🎨",
+                    "Historia" to "🌎",
+                    "Música" to "🎵"
+                )
+                val nuevoFav = FavoriteSubject(
+                    userCorreo = correo,
+                    nombre = nombreMateria,
+                    descripcion = "Materia principal de EduTech",
+                    emoji = emojiMap[nombreMateria] ?: "⭐"
+                )
+                db.favoriteSubjectDao().insertFavorite(nuevoFav)
+                Toast.makeText(this@HomeActivity, "'$nombreMateria' añadida a favoritos ⭐", Toast.LENGTH_SHORT).show()
             }
-
-            override fun onQueryTextChange(newText: String?): Boolean {
-                val queryNormalizada = normalizeString(newText.orEmpty())
-                var algunaMateriaVisible = false
-
-                materias.forEach { (cardId, nombreMateria) ->
-                    val card = findViewById<CardView>(cardId)
-                    val coincide = normalizeString(nombreMateria).contains(queryNormalizada)
-                    if (coincide) {
-                        card.visibility = View.VISIBLE
-                        algunaMateriaVisible = true
-                    } else {
-                        card.visibility = View.GONE
-                    }
-                }
-
-                rowMap.forEach { (rowView, cardIds) ->
-                    val algunHijoVisible = cardIds.any { id ->
-                        findViewById<CardView>(id).visibility == View.VISIBLE
-                    }
-                    rowView?.visibility = if (algunHijoVisible) View.VISIBLE else View.GONE
-                }
-
-                tvSinResultados?.visibility = if (algunaMateriaVisible) View.GONE else View.VISIBLE
-                return true
-            }
-        })
-    }
-
-    private fun normalizeString(text: String): String {
-        val unaccented = Normalizer.normalize(text, Normalizer.Form.NFD)
-        return unaccented.replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "").lowercase()
+        }
     }
 }
